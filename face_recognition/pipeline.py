@@ -1,10 +1,12 @@
 import boto3
 import json
 from elasticsearch import Elasticsearch
-import cv2
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
+import base64
+from PIL import Image
+import io
 
 # Initialize AWS clients
 rekognition = boto3.client("rekognition", region_name="us-east-1")
@@ -44,91 +46,145 @@ get_image_from_db()
 
 print("\n")
 
+def download_and_convert_image(image_url):
+    """Download an image and convert it to a Rekognition-compatible format (JPEG)."""
+    try:
+        response = requests.get(image_url, headers={
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'image/jpeg,image/png,image/webp'
+        }, stream=True)
+
+        if response.status_code != 200:
+            print(f"Skipping {image_url}: Failed to download")
+            return None
+        
+        # Open the image
+        img = Image.open(io.BytesIO(response.content))
+
+        # Convert to RGB (avoids transparency issues)
+        img = img.convert('RGB')
+
+        # Save as JPEG
+        buffer = io.BytesIO()
+        img.save(buffer, format='JPEG', quality=95)
+        img_bytes = buffer.getvalue()
+
+        # Skip images that are too small or too large
+        if len(img_bytes) < 10000:  # Ignore images smaller than 10 KB
+            print(f"Skipping {image_url}: Image too small ({len(img_bytes)} bytes)")
+            return None
+        if len(img_bytes) > 5_000_000:  # Ignore images larger than 5 MB
+            print(f"Skipping {image_url}: Image too large ({len(img_bytes)} bytes)")
+            return None
+
+        return img_bytes
+
+    except Exception as e:
+        print(f"Skipping {image_url}: {e}")
+        return None
+
+
 def search_web_images(face_features):
-    # Search across news sites and social media
+    """Search news websites, extract images, and compare facial features."""
+    print("Starting web search...")
     search_urls = [
-        "https://news.google.com",
-        "https://twitter.com/search",
-        "https://www.instagram.com/explore"
+        "https://www.cnn.com/world",
+        # "https://www.reuters.com/world",
+        # "https://www.bbc.com/news",
+        # "https://www.aljazeera.com/news",
+        # "https://www.straitstimes.com/world"
     ]
     
     matches = []
-    for url in search_urls:
-        # Scrape images from each source
-        response = requests.get(url)
-        soup = BeautifulSoup(response.content, 'html.parser')
-        images = soup.find_all('img')
-        
-        # Compare faces in found images
-        for img in images:
-            img_url = img.get('src')
-            if img_url:
-                img_data = requests.get(img_url).content
-                comparison = rekognition.compare_faces(
-                    SourceImage={"Bytes": face_features},
-                    TargetImage={"Bytes": img_data}
-                )
-                if comparison['FaceMatches']:
-                    matches.append({
-                        "url": img_url,
-                        "source": url,
-                        "similarity": comparison['FaceMatches'][0]['Similarity']
-                    })
-    
-    # Store results in Elasticsearch
-    for match in matches:
-        es.index(
-            index="web_matches",
-            body=match
-        )
-    
+    headers = {'User-Agent': 'Mozilla/5.0'}
+
+    for base_url in search_urls:
+        print(f"Searching: {base_url}")
+        try:
+            response = requests.get(base_url, headers=headers, timeout=10)
+            soup = BeautifulSoup(response.content, 'html.parser')
+            images = soup.find_all('img', src=True)
+            
+            for img in images:
+                img_url = img.get('src')
+                if img_url:
+                    # Clean the URL by removing query parameters
+                    base_url = img_url.split('?')[0]
+                    
+                    try:
+                        response = requests.get(base_url, headers={
+                            'User-Agent': 'Mozilla/5.0',
+                            'Accept': 'image/jpeg,image/png'
+                        }, stream=True)
+                        
+                        # Process image with explicit format handling
+                        img = Image.open(response.raw)
+                        rgb_img = img.convert('RGB')
+                        
+                        # Save as fresh JPEG
+                        buffer = io.BytesIO()
+                        rgb_img.save(buffer, format='JPEG', quality=95)
+                        img_bytes = buffer.getvalue()
+                        
+                        comparison = rekognition.compare_faces(
+                            SourceImage={"Bytes": face_features},
+                            TargetImage={"Bytes": img_bytes},
+                            SimilarityThreshold=70
+                        )
+
+                        if comparison.get('FaceMatches'):
+                            match = {
+                                "url": img_url,
+                                "source": base_url,
+                                "similarity": comparison['FaceMatches'][0]['Similarity']
+                            }
+                            matches.append(match)
+                            print(f"✅ Match found! {img_url} (Similarity: {match['similarity']}%)")
+                        else:
+                            print(f"❌ No match for {img_url}")
+
+                    except Exception as e:
+                        print(f"Error comparing {img_url}: {str(e)}")
+
+        except Exception as e:
+            print(f"Error fetching {base_url}: {str(e)}")
+            
     return matches
 
-def process_missing_person(image_path):
-    # Extract face features including the multilingual embeddings that will enable searching across multiple languages so a larger data pool can be searched
-    face_embedding = extract_face_features(image_path) 
+def process_image(img_bytes):
+    """Convert WebP (or any format) to JPEG for Rekognition processing."""
+    temp_buffer = io.BytesIO(img_bytes)
+    img = Image.open(temp_buffer)
 
-    # Store embeddings in Elasticsearch 
-    doc_id = store_embeddings(face_embedding)
-    matches = search_web_images(image_path)
-    insights = analyze_case(face_embedding, matches)
-    
-    return {
-        "case_id": doc_id,
-        "matches": matches,
-        "insights": insights
-    }
+    # Convert to RGB (removes transparency)
+    img = img.convert('RGB')
 
-def extract_face_features(image_path):
-    with open(image_path, "rb") as image:
-        rekognition_features = rekognition.detect_faces(
-            Image={"Bytes": image.read()},
-            Attributes=["ALL"]
-        )
+    output_buffer = io.BytesIO()
+    img.save(output_buffer, format='JPEG', quality=95)
     
-    # Convert Rekognition features to a string (for Cohere)
+    return output_buffer.getvalue()
+
+def extract_face_features(base64_image):
+    # Decode base64 string to bytes
+    image_bytes = base64.b64decode(base64_image)
+    
+    # Process with Rekognition
+    rekognition_features = rekognition.detect_faces(
+        Image={"Bytes": image_bytes},
+        Attributes=["ALL"]
+    )
+    
+    # Convert Rekognition features to string
     text_description = str(rekognition_features["FaceDetails"])
     
-    # Use Cohere to get embeddings (multilingual support)
-    response = bedrock.invoke_model(
-        modelId='cohere.embed-multilingual-v3',
-        body=json.dumps({
-            'texts': [text_description]
-        })
-    )
-
-    multilingual_embedding = json.loads(response['body'].read())['embeddings'][0]
-    
     return {
-        "rekognition": rekognition_features,
-        "embedding": multilingual_embedding
+        "rekognition": rekognition_features
     }
 
 def store_embeddings(face_data):
     return es.index(
         index="missing_persons",
         body={
-            "embedding": face_data["embedding"],
             "features": face_data["rekognition"]
         }
     )
@@ -146,7 +202,13 @@ def analyze_case(face_data, matches):
     response = bedrock.invoke_model(
         modelId='anthropic.claude-3-haiku-20240307-v1:0',
         body=json.dumps({
-            "prompt": prompt,
+            "anthropic_version": "bedrock-2023-05-31",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
             "max_tokens": 500,
             "temperature": 0.7
         })
@@ -154,12 +216,21 @@ def analyze_case(face_data, matches):
     
     return json.loads(response['body'].read())['completion']
 
+# Base 64 encoding function
+def image_to_base64(image_path):
+    with open(image_path, "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+    return encoded_string
+
+# Test functions
 def test_pipeline():
     print("Starting pipeline test...")
     
     # Test face detection and get face data
     print("Testing face detection...")
-    face_data = extract_face_features("./missing_persons/missingperson1.jpg")  
+    image_path = "./missing_persons/missingperson1.jpg"
+    base64_image = image_to_base64(image_path)
+    face_data = extract_face_features(base64_image)  
     print("Face detection results:", json.dumps(face_data, indent=2))
     
     print("Testing storage...")
