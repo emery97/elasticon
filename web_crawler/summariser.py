@@ -41,11 +41,16 @@ def extract_fields(text):
                 Extract the following structured fields from the given text:
                 - Timestamp (Date or Time Mentioned strictly in DD-MM-YYYY format)
                 - Location (City, State, or Address)
+                - City (if applicable)
+                - State (if applicable)
+                - Address (if applicable)
+                - Town (if applicable)
                 - Summary (A readable summary of the text, no more than two lines)
-                If no timestamp or location is found, return NULL.
+                - Persons (a list of names found in the text in array format, ["...", "...", "..."])
+                If no timestamp or location or city or state or address or town or persons is found, return null.
 
                 Text: "{text}"
-                Response format (strictly JSON): {{"timestamp": "...", "location": "...", "summary": "..."}}
+                Response format (strictly JSON): {{"timestamp": "...", "location": "...", "city" : "...", "state" : "...", "address" : "...", "summary": "...", "persons" : ["...", "...", "..."]}}
                 """
             }
         ]
@@ -86,3 +91,6 @@ def extract_fields(text):
     except Exception as e:
         print(f"⚠️ AWS Bedrock API Error: {e}")
         return None
+
+
+#print(extract_fields("A MAN named John Ruckus WAS FOUND IN OHIO, at 32 Gundam Street, police officer James Hawking caught him on 15th Febraury 2025. "))

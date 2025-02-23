@@ -31,8 +31,8 @@ class NewsCrawlerSpider(scrapy.Spider):
     allowed_domains = ["mothership.sg"]  
     start_urls = ["https://mothership.sg/"]  
     custom_settings = {
-        "DEPTH_LIMIT": 1,
-        "CLOSESPIDER_PAGECOUNT": 1,
+        "DEPTH_LIMIT": 2,
+        "CLOSESPIDER_PAGECOUNT": 10,
     }
 
     # Initialize Elasticsearch Connection
@@ -93,7 +93,11 @@ class NewsCrawlerSpider(scrapy.Spider):
                             "title": response.xpath("//title/text()").get(),
                             "timestamp": extracted_data.get("timestamp"),
                             "location": extracted_data.get("location"),
+                            "city": extracted_data.get("city"),
+                            "state": extracted_data.get("state"),
+                            "address": extracted_data.get("address"),
                             "summary": extracted_data.get("summary"),
+                            "persons": extracted_data.get("persons")
                         }
                     )
                     print(f"✅ Stored in Elasticsearch: {response.url}")
