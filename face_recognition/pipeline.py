@@ -46,44 +46,6 @@ get_image_from_db()
 
 print("\n")
 
-def download_and_convert_image(image_url):
-    """Download an image and convert it to a Rekognition-compatible format (JPEG)."""
-    try:
-        response = requests.get(image_url, headers={
-            'User-Agent': 'Mozilla/5.0',
-            'Accept': 'image/jpeg,image/png,image/webp'
-        }, stream=True)
-
-        if response.status_code != 200:
-            print(f"Skipping {image_url}: Failed to download")
-            return None
-        
-        # Open the image
-        img = Image.open(io.BytesIO(response.content))
-
-        # Convert to RGB (avoids transparency issues)
-        img = img.convert('RGB')
-
-        # Save as JPEG
-        buffer = io.BytesIO()
-        img.save(buffer, format='JPEG', quality=95)
-        img_bytes = buffer.getvalue()
-
-        # Skip images that are too small or too large
-        if len(img_bytes) < 10000:  # Ignore images smaller than 10 KB
-            print(f"Skipping {image_url}: Image too small ({len(img_bytes)} bytes)")
-            return None
-        if len(img_bytes) > 5_000_000:  # Ignore images larger than 5 MB
-            print(f"Skipping {image_url}: Image too large ({len(img_bytes)} bytes)")
-            return None
-
-        return img_bytes
-
-    except Exception as e:
-        print(f"Skipping {image_url}: {e}")
-        return None
-
-
 def search_web_images(face_features):
     """Search news websites, extract images, and compare facial features."""
     print("Starting web search...")
@@ -233,9 +195,9 @@ def test_pipeline():
     face_data = extract_face_features(base64_image)  
     print("Face detection results:", json.dumps(face_data, indent=2))
     
-    print("Testing storage...")
-    test_results = store_embeddings(face_data)
-    print("Storage results:", test_results)
+    # print("Testing storage...")
+    # test_results = store_embeddings(face_data)
+    # print("Storage results:", test_results)
     
     # Test search
     print("Testing search...")
