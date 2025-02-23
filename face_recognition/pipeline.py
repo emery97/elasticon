@@ -17,6 +17,33 @@ es = Elasticsearch(
     basic_auth=(USERNAME, PASSWORD)
 )
 
+# Getting base64 image from database
+def get_image_from_db():
+    index_name = "missing_persons"
+    
+    query = {
+        "query": {
+            "term": {  # Use term for exact match
+                "id.keyword": "person1"  
+            }
+        }
+    }
+
+    try:
+        response = es.search(index=index_name, body=query)
+        if response["hits"]["hits"]:
+            document = response["hits"]["hits"][0]  # Get the first match
+            base64 = document["_source"]["base64Image"]
+            print("Document Found:", base64)
+        else:
+            print("No matching document found.")
+    except Exception as e:
+        print("Error fetching document:", e)
+
+get_image_from_db()
+
+print("\n")
+
 def search_web_images(face_features):
     # Search across news sites and social media
     search_urls = [
@@ -149,7 +176,7 @@ def test_pipeline():
     insights = analyze_case(face_data, search_results)
     print("Insights:", insights)
 
-if __name__ == "__main__":
-    test_pipeline()
+# if __name__ == "__main__":
+#     test_pipeline()
 
 
