@@ -17,6 +17,33 @@ es = Elasticsearch(
     basic_auth=(USERNAME, PASSWORD)
 )
 
+# Getting base64 image from database
+def get_image_from_db():
+    index_name = "missing_persons"
+    
+    query = {
+        "query": {
+            "term": {  # Use term for exact match
+                "id.keyword": "person1"  
+            }
+        }
+    }
+
+    try:
+        response = es.search(index=index_name, body=query)
+        if response["hits"]["hits"]:
+            document = response["hits"]["hits"][0]  # Get the first match
+            base64 = document["_source"]["base64Image"]
+            print("Document Found:", base64)
+        else:
+            print("No matching document found.")
+    except Exception as e:
+        print("Error fetching document:", e)
+
+get_image_from_db()
+
+print(base64)
+
 def search_web_images(face_features):
     # Search across news sites and social media
     search_urls = [
@@ -56,6 +83,23 @@ def search_web_images(face_features):
         )
     
     return matches
+
+def process_missing_person_base64(base64):
+    # Extract face features including the multilingual embeddings that will enable searching across multiple languages so a larger data pool can be searched
+    face_embedding = extract_face_features(image_path) 
+
+    # Store embeddings in Elasticsearch 
+    doc_id = store_embeddings(face_embedding)
+    matches = search_web_images(image_path)
+    insights = analyze_case(face_embedding, matches)
+    
+    return {
+        "case_id": doc_id,
+        "matches": matches,
+        "insights": insights
+    }
+
+
 
 def process_missing_person(image_path):
     # Extract face features including the multilingual embeddings that will enable searching across multiple languages so a larger data pool can be searched
@@ -149,5 +193,7 @@ def test_pipeline():
     insights = analyze_case(face_data, search_results)
     print("Insights:", insights)
 
-if __name__ == "__main__":
-    test_pipeline()
+# if __name__ == "__main__":
+#     test_pipeline()
+
+
