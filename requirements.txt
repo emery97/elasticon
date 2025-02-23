@@ -1,0 +1,6 @@
+boto3
+elasticsearch
+opencv-python
+numpy
+requests
+beautifulsoup4
