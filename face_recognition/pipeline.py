@@ -9,8 +9,8 @@ from PIL import Image
 import io
 
 # Initialize AWS clients
-rekognition = boto3.client("rekognition", region_name="us-east-1")
-bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
+rekognition = boto3.client("rekognition", region_name="ap-southeast-2")
+bedrock = boto3.client('bedrock-runtime', region_name='ap-southeast-2')
 ELASTIC_CLOUD_URL = "https://d055bd66cb6340cbaaf1e9955db841f7.us-central1.gcp.cloud.es.io:443"
 USERNAME = "elastic"
 PASSWORD = "uLko2QHYccbOJXVhUO1vq7f0"
