@@ -52,12 +52,14 @@ def search_web_images(image):
     
     search_urls = [
         'https://www.independent.ie/irish-news/missing-person-case-files-rise-by-38-to-reach-almost-900-active-garda-investigations/a1538496733.html',
-    # "https://www.cnn.com/world",
-    # "https://www.reuters.com/world",
-    # "https://www.straitstimes.com",
-    # "https://www.channelnewsasia.com",
-    # "https://www.todayonline.com",
-    # "https://www.asiaone.com"
+        "https://www.cnn.com/world",
+        "https://www.reuters.com/world",
+        "https://www.straitstimes.com",
+        "https://www.channelnewsasia.com",
+        "https://www.todayonline.com",
+        "https://www.asiaone.com",
+        "https://news.google.com",
+        "https://www.instagram.com/explore"
     ]
 
     
