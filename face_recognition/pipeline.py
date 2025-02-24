@@ -7,6 +7,8 @@ from bs4 import BeautifulSoup
 import base64
 from PIL import Image
 import io
+import time
+import botocore
 
 # Initialize AWS clients
 rekognition = boto3.client("rekognition", region_name="ap-southeast-2")
@@ -19,16 +21,45 @@ es = Elasticsearch(
     basic_auth=(USERNAME, PASSWORD)
 )
 
-def search_web_images(face_features):
+def process_image(img_bytes):
+    """Convert WebP (or any format) to JPEG for Rekognition processing."""
+    temp_buffer = io.BytesIO(img_bytes)
+    img = Image.open(temp_buffer)
+
+    # Convert to RGB (removes transparency)
+    img = img.convert('RGB')
+
+    output_buffer = io.BytesIO()
+    img.save(output_buffer, format='JPEG', quality=95)
+    
+    return output_buffer.getvalue()
+
+
+def store_embeddings(face_data):
+    return es.index(
+        index="missing_persons",
+        body={
+            "features": face_data["rekognition"]
+        }
+    )
+
+def search_web_images(image):
     """Search news websites, extract images, and compare facial features."""
     print("Starting web search...")
+    
+    # Use the face_features directly as bytes for comparison
+    source_bytes = base64.b64decode(image) if isinstance(image, str) else image
+    
     search_urls = [
-        "https://www.cnn.com/world",
-        # "https://www.reuters.com/world",
-        # "https://www.bbc.com/news",
-        # "https://www.aljazeera.com/news",
-        # "https://www.straitstimes.com/world"
+        'https://www.independent.ie/irish-news/missing-person-case-files-rise-by-38-to-reach-almost-900-active-garda-investigations/a1538496733.html',
+    # "https://www.cnn.com/world",
+    # "https://www.reuters.com/world",
+    # "https://www.straitstimes.com",
+    # "https://www.channelnewsasia.com",
+    # "https://www.todayonline.com",
+    # "https://www.asiaone.com"
     ]
+
     
     matches = []
     headers = {'User-Agent': 'Mozilla/5.0'}
@@ -43,27 +74,13 @@ def search_web_images(face_features):
             for img in images:
                 img_url = img.get('src')
                 if img_url:
-                    # Clean the URL by removing query parameters
-                    base_url = img_url.split('?')[0]
-                    
                     try:
-                        response = requests.get(base_url, headers={
-                            'User-Agent': 'Mozilla/5.0',
-                            'Accept': 'image/jpeg,image/png'
-                        }, stream=True)
-                        
-                        # Process image with explicit format handling
-                        img = Image.open(response.raw)
-                        rgb_img = img.convert('RGB')
-                        
-                        # Save as fresh JPEG
-                        buffer = io.BytesIO()
-                        rgb_img.save(buffer, format='JPEG', quality=95)
-                        img_bytes = buffer.getvalue()
+                        img_response = requests.get(img_url, headers=headers)
+                        web_image_bytes = process_image(img_response.content)
                         
                         comparison = rekognition.compare_faces(
-                            SourceImage={"Bytes": face_features},
-                            TargetImage={"Bytes": img_bytes},
+                            SourceImage={"Bytes": source_bytes},
+                            TargetImage={"Bytes": web_image_bytes},
                             SimilarityThreshold=70
                         )
 
@@ -86,70 +103,44 @@ def search_web_images(face_features):
             
     return matches
 
-def process_image(img_bytes):
-    """Convert WebP (or any format) to JPEG for Rekognition processing."""
-    temp_buffer = io.BytesIO(img_bytes)
-    img = Image.open(temp_buffer)
-
-    # Convert to RGB (removes transparency)
-    img = img.convert('RGB')
-
-    output_buffer = io.BytesIO()
-    img.save(output_buffer, format='JPEG', quality=95)
-    
-    return output_buffer.getvalue()
-
-def extract_face_features(base64_image):
-    # Decode base64 string to bytes
-    image_bytes = base64.b64decode(base64_image)
-    
-    # Process with Rekognition
-    rekognition_features = rekognition.detect_faces(
-        Image={"Bytes": image_bytes},
-        Attributes=["ALL"]
-    )
-    
-    # Convert Rekognition features to string
-    text_description = str(rekognition_features["FaceDetails"])
-    
-    return {
-        "rekognition": rekognition_features
-    }
-
-def store_embeddings(face_data):
-    return es.index(
-        index="missing_persons",
-        body={
-            "features": face_data["rekognition"]
-        }
-    )
-
 def analyze_case(face_data, matches):
-    prompt = f"""
-    Analyze this missing person case:
-
-    Face Data: {face_data}
-    Potential Matches: {matches}
-
-    Provide insights on whether these matches could potentially belong to the same individual.
-    """
+    """Analyze case with improved rate limiting"""
+    wait_time = 2  
+    max_attempts = 1
     
-    response = bedrock.invoke_model(
-        modelId='anthropic.claude-3-haiku-20240307-v1:0',
-        body=json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            "max_tokens": 500,
-            "temperature": 0.7
-        })
-    )
+    for attempt in range(max_attempts):
+        try:
+            prompt = f"""
+            Analyze this missing person case:
+            Face Data: {face_data}
+            Potential Matches: {matches}
+            Provide insights on whether these matches could potentially belong to the same individual.
+            """
+            
+            response = bedrock.invoke_model(
+                modelId='anthropic.claude-3-haiku-20240307-v1:0',
+                body=json.dumps({
+                    "anthropic_version": "bedrock-2023-05-31",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    "max_tokens": 500,
+                    "temperature": 0.7
+                })
+            )
+            return json.loads(response['body'].read())['content']
+            
+        except botocore.exceptions.ClientError as e:
+            if attempt < max_attempts - 1:
+                time.sleep(wait_time)
+                wait_time *= 2  # Exponential backoff
+            else:
+                raise
     
-    return json.loads(response['body'].read())['completion']
+    return "Analysis unavailable due to rate limiting"
 
 # Base 64 encoding function
 def image_to_base64(image_path):
@@ -162,11 +153,10 @@ def test_pipeline():
     print("Starting pipeline test...")
     
     # Test face detection and get face data
-    print("Testing face detection...")
+    # print("Testing face detection...")
     image_path = "./missing_persons/missingperson1.jpg"
     base64_image = image_to_base64(image_path)
-    face_data = extract_face_features(base64_image)  
-    print("Face detection results:", json.dumps(face_data, indent=2))
+    # print("Face detection results:", json.dumps(face_data, indent=2))
     
     # print("Testing storage...")
     # test_results = store_embeddings(face_data)
@@ -174,12 +164,12 @@ def test_pipeline():
     
     # Test search
     print("Testing search...")
-    search_results = search_web_images("./missing_persons/missingperson1.jpg")
+    search_results = search_web_images(base64_image)
     print("Search results:", search_results)
     
     # Test insights
     print("Testing insights...")
-    insights = analyze_case(face_data, search_results)
+    insights = analyze_case(base64_image, search_results)
     print("Insights:", insights)
 
 if __name__ == "__main__":
