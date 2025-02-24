@@ -1,0 +1,25 @@
+
+.absolute {
+    position: absolute;
+  }
+  
+  .bg-black {
+    background-color: black;
+  }
+  
+  .text-white {
+    color: white;
+  }
+  
+  .text-sm {
+    font-size: 0.875rem; 
+  }
+  
+  .rounded {
+    border-radius: 0.25rem; 
+  }
+  
+  .p-2 {
+    padding: 0.5rem; 
+  }
+  
