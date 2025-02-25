@@ -1,82 +1,50 @@
-# Free Tailwind admin dashboard template
+# Hack&Roll 2024
+![Chioset Logo](https://github.com/emery97/HackAndRoll/blob/main/HackAndRoll/front-end/logo.png)
 
-![Mosaic Tailwind admin template preview](https://github.com/cruip/tailwind-dashboard-template/assets/2683512/ef306423-3b89-4d0c-be80-9c5c682478d1)
+Chioset is a full-stack application designed to help users make quick, informed outfit decisions. By integrating weather data, wardrobe management, and Augmented Reality (AR), Chioset offers a fun and interactive way to choose outfits based on real-time conditions and personal style.
 
-**Mosaic Lite** is a responsive admin dashboard template built on top of Tailwind CSS and fully coded in React. It comes with several pre-coded charts (built with Chart.js 3) and widgets, and it's a great starting for anyone who wants to create a user interface for SaaS products, administrator dashboards, modern web apps, and more.
+## Inspiration
+Chioset was born from the daily challenge of deciding what to wear, considering factors like weather, occasion, and personal preferences. We wanted to develop a solution that not only saves time but also makes the process of dressing up more engaging. The addition of Augmented Reality was inspired by the idea of letting users visualize their outfits in real-time, creating a bridge between imagination and reality.
 
-**UPDATE 2025-02-02** Added Tailwind v4 support!
+## What It Does
+Chioset simplifies the decision-making process by:
+- **Recommending outfits** based on the current weather conditions (e.g., sunny, rainy, cold).
+- Categorizing clothes in your **personal wardrobe** and using that data to generate a tailored **“Outfit of the Day.”**
+- Offering an **AR experience** where users can virtually try on clothes, helping them visualize how outfits will look in real life.
+- Providing real-time **weather updates** that influence outfit choices.
 
-Use it for whatever you want, and be sure to reach us out on [Twitter](https://twitter.com/Cruip_com) if you build anything cool/useful with it.
+## How We Built It
+Chioset is a full-stack application developed with the following technologies:
+- **Frontend**: React.js was used to create an interactive and responsive user interface.
+- **Backend**: Node.js powers the server and handles API requests.
+- **Database**: MongoDB stores wardrobe data, including images, attributes, and metadata.
+- **Augmented Reality**: TensorFlow.js was integrated to offer real-time AR outfit visualization.
+- **Weather Integration**: The WeatherAPI provides up-to-date weather conditions to influence outfit recommendations.
+- **Image Processing**: We used Removebg to remove backgrounds from clothing images for a cleaner AR experience.
 
-Created and maintained with ❤️ by [Cruip.com](https://cruip.com/).
+## Challenges We Ran Into
+- **Integrating AR**: The most significant challenge was incorporating Augmented Reality in a seamless way. TensorFlow.js posed some difficulties with real-time processing, but we overcame this by optimizing the experience for smoother interaction.
+- **Weather Data Reliability**: Ensuring that weather data was both accurate and timely required careful handling of API calls and error management.
 
-## Live demo
+## Accomplishments We're Proud Of
+- Successfully integrating **Augmented Reality** into the platform to allow users to virtually try on outfits.
+- The seamless interaction between the **weather API** and wardrobe data to create **personalized outfit suggestions**.
+- Our ability to quickly build a **full-stack application** that is not only functional but also user-friendly and engaging.
 
-Check the live demo here 👉️ [https://mosaic.cruip.com/](https://mosaic.cruip.com/)
+## What We Learned
+- We gained valuable experience in integrating **Augmented Reality** using TensorFlow.js, learning about its capabilities and limitations.
+- The project taught us how to manage **live weather data** and incorporate it into an app for real-time functionality.
+- We also learned how to efficiently store and retrieve **metadata and images** from a MongoDB database.
 
-## Mosaic Pro
+## What's Next for Chioset
+- **Enhanced AR Experience**: We're planning to integrate more advanced features for a more accurate 'try-on' experience using Outfit Anyone.
+- **Improved Weather Integration**: We want to incorporate more granular weather details (e.g., wind speed, humidity) to suggest even more customized outfits.
+- **User Accounts**: Allow users to create profiles and save their wardrobe, favorite outfits, and style preferences for a more personalized experience.
 
-[![Mosaic Tailwind Admin Template](https://github.com/cruip/tailwind-dashboard-template/assets/2683512/2b4d0fae-bb07-4229-8a8a-48005f2f33cb)](https://cruip.com/mosaic/)
-
-## Design files
-
-If you need the design files, you can download them from Figma's Community 👉 https://bit.ly/3sigqHe
-
-## Table of contents
-
-* [Usage](#usage)
-  * [Project setup](#project-setup)
-  * [Compiles and hot-reloads for development](#compiles-and-hot-reloads-for-development)
-  * [Compiles and minifies for production](#compiles-and-minifies-for-production)
-  * [Customize configuration](#customize-configuration)
-* [Support notes](#support-notes)            
-* [Credits](#credits)
-* [Terms and License](#terms-and-license)
-* [About Us](#about-us)
-* [Stay in the loop](#stay-in-the-loop)
-
-## Usage
-
-This project was bootstrapped with [Vite](https://vitejs.dev/).
-
-### Project setup
-```
-npm install
-```
-
-#### Compiles and hot-reloads for development
-```
-npm run dev
-```
-
-#### Compiles and minifies for production
-```
-npm run build
-```
-
-#### Customize configuration
-See [Configuration Reference](https://vitejs.dev/guide/).
-
-### Support notes
-We are shipping our templates with a very basic React configuration to let you quickly get into the development process, but we don't discourage you from using any other configuration or framework built on the top of React. So, please note that any request dealing with React (e.g. extra features, customisations, et cetera) is to be considered out of the support scope.
-
-For more information about what support covers, please see our (FAQs)[https://cruip.com/faq/].
-
-## Credits
-
-- [Nucleo](https://nucleoapp.com/)
-
-## Terms and License
-
-- Released under the [GPL](https://www.gnu.org/licenses/gpl-3.0.html).
-- Copyright 2020 [Cruip](https://cruip.com/).
-- Use it for personal and commercial projects, but please don’t republish, redistribute, or resell the template.
-- Attribution is not required, although it is really appreciated.
-
-## About Us
-
-We're an Italian developer/designer duo creating high-quality design/code resources for developers, makers, and startups.
-
-## Stay in the loop
-
-If you would like to know when we release new resources, you can follow [@pacovitiello](https://x.com/pacovitiello) and [@DavidePacilio](https://x.com/DavidePacilio) on X, or you can subscribe to our [newsletter](https://cruip.com/newsletter/).
+## Built With
+- **Frontend**: React.js
+- **Backend**: Node.js
+- **Database**: MongoDB
+- **Augmented Reality**: TensorFlow.js
+- **Weather Data**: WeatherAPI
+- **Image Background Removal**: Removebg
