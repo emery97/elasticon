@@ -21,23 +21,33 @@ export default function PersonSearch() {
   const handleSearch = async () => {
     setLoading(true);
     setError(null);
-    setResults([]);
-    console.log("HI");
-
+    setResults([]); // Reset results before searching
+  
     try {
-        const res = await axios.post<{ hits: { hits: SearchResult[] } }>(
-            'http://localhost:3000/api/search_person',
-            { name }
-        );
-        console.log("Data from api: " + res.data.hits.hits);
-          
-      setResults(res.data.hits.hits);
+      const res = await axios.post<{ hits: { hits: SearchResult[] } }>(
+        'http://localhost:5000/api/search_person',
+        { name }
+      );
+  
+      console.log("API Response:", res.data); // ✅ Log full response
+  
+      // ✅ Ensure correct array extraction
+      if (res.data?.hits?.length > 0) {
+        console.log(res.data?.hits?.length);
+        setResults(res.data.hits); // ✅ Now setting correct results
+      } else {
+        console.warn("No results found in API response.");
+        setResults([]);
+      }
     } catch (err) {
-      setError('Error fetching results.' + err);
+      console.error('Axios error:', err);
+      setError('Error fetching results.');
     } finally {
       setLoading(false);
     }
   };
+  
+  
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white rounded shadow">
@@ -60,7 +70,7 @@ export default function PersonSearch() {
       {error && <div className="text-red-500 mt-3">{error}</div>}
 
       <div className="mt-4 space-y-3">
-        {results.length > 0 ? (
+        {results && results.length > 0 ? (
           results.map((item) => (
             <div key={item._id} className="p-4 bg-gray-50 rounded shadow-sm">
               <h3 className="font-semibold">{item._source.title}</h3>
